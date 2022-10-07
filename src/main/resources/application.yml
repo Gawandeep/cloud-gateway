@@ -1,0 +1,70 @@
+server:
+  port: 8989
+  
+spring:
+  config:
+    import:
+    - configserver:http://localhost:9191
+  application:
+    name: Gateway-Service
+  cloud:
+    gateway:
+      routes:
+      - id: order-service
+        uri: lb://Order-Service
+        predicates:
+        - Path=/order/**
+        filters:
+        - name: CircuitBreaker
+          args:
+            name: order-service
+            fallbackuri: forward:/orderFallback
+            statusCodes: "500"
+      - id: payment-service
+        uri: lb://Payment-Service
+        predicates:
+        - Path=/payment/**
+        filters:
+        - name: CircuitBreaker
+          args:
+            name: payment-service
+            fallbackuri: forward:/paymentFallback
+            statusCodes: "500"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+        - '*'
+  endpoint:
+    health:
+      show-details: always
+            
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      slidingWindowSize: 10
+      minimumNumberOfCalls: 5
+      permittedNumberOfCallsInHalfOpenState: 3
+      automaticTransitionFromOpenToHalfOpenEnabled: true
+      waitDurationInOpenState: 2s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+    shared:
+      slidingWindowSize: 100
+      permittedNumberOfCallsInHalfOpenState: 30
+      waitDurationInOpenState: 1s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+  instances:
+    order-service:
+     baseConfig: default
+    payment-service:
+     baseConfig: default 
+
+      
+    
+ 
+    
+    
